@@ -21,7 +21,7 @@ namespace Fileshare_Trigger
     {
         [FunctionName("FileShareTrigger")]
         public static async Task Run(
-            [EventHubTrigger("fileshare-write-event", 
+            [EventHubTrigger("azfileshareevents", 
             Connection = "EVENT_HUB_CONNECTION_STRING")] EventData[] events, 
             ILogger log)
         {
@@ -31,6 +31,9 @@ namespace Fileshare_Trigger
             {
                 try
                 {
+                    log.LogInformation("event data:");
+                    log.LogInformation(eventData.EventBody.ToString());
+
                     // Process message here
                     await Task.Yield();
                     string targetPath = Environment.GetEnvironmentVariable("TARGET_DIRECTORY");
@@ -38,7 +41,7 @@ namespace Fileshare_Trigger
                     foreach (Record record in logs.records)
                     {
                         // Only process for file that is completed
-                        if (record.operationName == "PutRange")
+                        if (record.category == "StorageWrite" && record.operationName == "Close" && record.properties.smbCommandMinor == "FileClose")
                         {
                             string url = record.uri;
                             Uri uri = new Uri(url);
@@ -47,7 +50,9 @@ namespace Fileshare_Trigger
                             if (targetPath != null && filePath.Contains(targetPath))
                             {
                                 // Target path is defined
+                                log.LogInformation($"Request sent for {filePath}.");
                                 await UploadFileToS3(filePath, log);
+
                             }
                             else if(targetPath == null)
                             {
@@ -81,7 +86,7 @@ namespace Fileshare_Trigger
                 path = filePath
             };
 
-            log.LogInformation($"Request sent for {filePath}.");
+            log.LogInformation($"upload to S3: {filePath}.");
 
 
             //copy file from file share to s3
@@ -91,14 +96,18 @@ namespace Fileshare_Trigger
             // Name of the share, directory, and file we'll download from
             string shareName = "myfilesharetest";
             string dirName = "upload";
-            string fileName = Path.GetFileName(filePath); ;
+            string fileName = Path.GetFileName(filePath); 
 
-            string bucketName = "doc-example-bucket";
+            log.LogInformation($"filename: {fileName}.");
 
-            string AccessKey = "";
-            string SecretKey = "";
-            string AWS_Region = "";
+            string bucketName = Environment.GetEnvironmentVariable("S3_BUCKETNAME"); ;
 
+            string AccessKey = Environment.GetEnvironmentVariable("S3_ACCESSKEY"); 
+            string SecretKey = Environment.GetEnvironmentVariable("S3_SECRETKEY"); 
+            string AWS_Region = "ap-southeast-2";
+
+            //try
+            //{
             // Get a reference to the file
             ShareClient share = new ShareClient(connectionString, shareName);
             ShareDirectoryClient directory = share.GetDirectoryClient(dirName);
@@ -107,23 +116,34 @@ namespace Fileshare_Trigger
             // Download the file
             ShareFileDownloadInfo download = file.Download();
 
+           /// var ms = new MemoryStream();
+            ///download.Content.CopyTo(ms);
+            ///StreamReader reader = new StreamReader(ms, Encoding.UTF8);
+            ///log.LogInformation(reader.ReadToEnd());
+            //}
+            //catch (Exception e)
+            //{
+            //    log.LogError(e.ToString());
+            //    return;
+            //}
+
 
             AmazonS3Client s3Client = new AmazonS3Client(AccessKey, SecretKey, AWS_Region);
             using (var ms = new MemoryStream())
             {
-                // Download blob content to stream
+            //    // Download blob content to stream
                 download.Content.CopyTo(ms);
 
-                var uploadRequest = new TransferUtilityUploadRequest
-                {
-                    InputStream = ms,
-                    Key = fileName,
-                    BucketName = bucketName,
-                  //  ContentType = file.ContentType
-                };
+            //    var uploadRequest = new TransferUtilityUploadRequest
+            //    {
+            //        InputStream = ms,
+            //        Key = fileName,
+            //        BucketName = bucketName,
+            //      //  ContentType = file.ContentType
+            //    };
 
-                var fileTransferUtility = new TransferUtility(s3Client);
-                await fileTransferUtility.UploadAsync(uploadRequest);
+            //    var fileTransferUtility = new TransferUtility(s3Client);
+            //    await fileTransferUtility.UploadAsync(uploadRequest);
             }
         }
     }

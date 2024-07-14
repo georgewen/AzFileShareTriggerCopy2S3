@@ -15,22 +15,29 @@ namespace Fileshare_Trigger
     public class Properties
     {
         public string accountName { get; set; }
-        public string userAgentHeader { get; set; }
-        public string referrerHeader { get; set; }
-        public string clientRequestId { get; set; }
-        public string etag { get; set; }
+        //public string userAgentHeader { get; set; }
+        //public string referrerHeader { get; set; }
+        //public string? clientRequestId { get; set; }
+#nullable enable
+        public string? etag { get; set; }
+#nullable disable
+
         public string serviceType { get; set; }
         public string objectKey { get; set; }
         public string lastModifiedTime { get; set; }
         public string metricResponseType { get; set; }
         public int serverLatencyMs { get; set; }
+        public int operationCount { get; set; }
         public int requestHeaderSize { get; set; }
+        public int requestBodySize { get; set; }
         public int responseHeaderSize { get; set; }
-        public string tlsVersion { get; set; }
-        public string accessTier { get; set; }
-        public string responseMd5 { get; set; }
-        public int? requestBodySize { get; set; }
-        public int? contentLengthHeader { get; set; }
+        public int responseBodySize { get; set; }
+        public int? smbCommandMajor { get; set; }
+#nullable enable
+        public string? smbCommandMinor { get; set; }
+#nullable disable
+
+
     }
 
     public class Record
@@ -42,7 +49,7 @@ namespace Fileshare_Trigger
         public string operationVersion { get; set; }
         public string schemaVersion { get; set; }
         public int statusCode { get; set; }
-        public string statusText { get; set; }
+        //public string statusText { get; set; }
         public int durationMs { get; set; }
         public string callerIpAddress { get; set; }
         public string correlationId { get; set; }
