@@ -14,6 +14,7 @@ using Azure.Storage.Files.Shares;
 using Azure.Storage.Files.Shares.Models;
 using System.Reflection.Metadata;
 using Amazon.S3.Transfer;
+using Amazon.Runtime;
 
 namespace Fileshare_Trigger
 {
@@ -106,8 +107,7 @@ namespace Fileshare_Trigger
             string SecretKey = Environment.GetEnvironmentVariable("S3_SECRETKEY"); 
             string AWS_Region = "ap-southeast-2";
 
-            //try
-            //{
+
             // Get a reference to the file
             ShareClient share = new ShareClient(connectionString, shareName);
             ShareDirectoryClient directory = share.GetDirectoryClient(dirName);
@@ -116,34 +116,24 @@ namespace Fileshare_Trigger
             // Download the file
             ShareFileDownloadInfo download = file.Download();
 
-           /// var ms = new MemoryStream();
-            ///download.Content.CopyTo(ms);
-            ///StreamReader reader = new StreamReader(ms, Encoding.UTF8);
-            ///log.LogInformation(reader.ReadToEnd());
-            //}
-            //catch (Exception e)
-            //{
-            //    log.LogError(e.ToString());
-            //    return;
-            //}
+            BasicAWSCredentials credentials = new BasicAWSCredentials(AccessKey, SecretKey);
+            AmazonS3Client s3Client = new AmazonS3Client(credentials, Amazon.RegionEndpoint.APSoutheast2);
 
-
-            AmazonS3Client s3Client = new AmazonS3Client(AccessKey, SecretKey, AWS_Region);
             using (var ms = new MemoryStream())
             {
             //    // Download blob content to stream
                 download.Content.CopyTo(ms);
 
-            //    var uploadRequest = new TransferUtilityUploadRequest
-            //    {
-            //        InputStream = ms,
-            //        Key = fileName,
-            //        BucketName = bucketName,
-            //      //  ContentType = file.ContentType
-            //    };
+                var uploadRequest = new TransferUtilityUploadRequest
+                {
+                    InputStream = ms,
+                    Key = fileName,
+                    BucketName = bucketName,
+                    //  ContentType = file.ContentType
+                };
 
-            //    var fileTransferUtility = new TransferUtility(s3Client);
-            //    await fileTransferUtility.UploadAsync(uploadRequest);
+                var fileTransferUtility = new TransferUtility(s3Client);
+                await fileTransferUtility.UploadAsync(uploadRequest);
             }
         }
     }
